@@ -72,7 +72,7 @@ The app waits for MariaDB to be healthy before starting, then creates all tables
 | Service | URL / host |
 |---|---|
 | Web app | http://localhost:5000 |
-| MariaDB | `localhost:3307` (external port) |
+| MariaDB | `localhost:3306` (external port) |
 
 ### 3. First run
 
@@ -133,7 +133,7 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Configure
-cp .env.example .env               # edit DATABASE_URL to point to localhost:3307
+cp .env.example .env               
 
 # Run
 python run.py
