@@ -3,6 +3,11 @@ name: Build & Push to Docker Hub
 on:
   push:
     branches: [main]
+    paths:
+      - "app/**"
+      - "requirements.txt"
+      - "Dockerfile"
+      - "run.py"
 
 jobs:
   build-and-push:
