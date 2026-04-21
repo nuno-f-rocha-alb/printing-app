@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Novo filamento{% endblock %}
+{% block title %}New filament{% endblock %}
 {% block content %}
-<h1 class="h3 mb-3">Novo filamento</h1>
+<h1 class="h3 mb-3">New filament</h1>
 <form method="post" class="card shadow-sm">
   <div class="card-body">
     <div class="row g-3">
       <div class="col-md-6">
-        <label class="form-label">Nome / Marca</label>
+        <label class="form-label">Brand / Name</label>
         <input name="name" class="form-control" required>
       </div>
       <div class="col-md-3">
@@ -14,22 +14,22 @@
         <input name="material" class="form-control" value="PLA">
       </div>
       <div class="col-md-3">
-        <label class="form-label">Cor</label>
-        <input name="color" class="form-control" placeholder="ex: Preto">
+        <label class="form-label">Color</label>
+        <input name="color" class="form-control" placeholder="e.g. Black">
       </div>
       <div class="col-md-6">
-        <label class="form-label">Stock inicial (g) <span class="text-muted">(opcional)</span></label>
+        <label class="form-label">Initial stock (g) <span class="text-muted">(optional)</span></label>
         <input name="stock_g" type="number" step="0.01" min="0" class="form-control">
       </div>
       <div class="col-md-6">
-        <label class="form-label">Preço dessa compra (€/kg) <span class="text-muted">(opcional)</span></label>
+        <label class="form-label">Purchase price ({{ currency }}/kg) <span class="text-muted">(optional)</span></label>
         <input name="price_per_kg" type="number" step="0.0001" min="0" class="form-control">
       </div>
     </div>
   </div>
   <div class="card-footer d-flex justify-content-between">
-    <a href="{{ url_for('main.filaments_list') }}" class="btn btn-link">Cancelar</a>
-    <button class="btn btn-primary">Criar</button>
+    <a href="{{ url_for('main.filaments_list') }}" class="btn btn-link">Cancel</a>
+    <button class="btn btn-primary">Create</button>
   </div>
 </form>
 {% endblock %}

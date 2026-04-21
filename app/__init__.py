@@ -58,6 +58,11 @@ def create_app():
 
     app.register_blueprint(main_bp)
 
+    @app.context_processor
+    def inject_currency():
+        from .models import Setting
+        return {"currency": Setting.get("currency_symbol", cast=str) or "€"}
+
     with app.app_context():
         for attempt in range(10):
             try:

@@ -30,14 +30,14 @@
       <div class="collapse navbar-collapse" id="nav">
         <ul class="navbar-nav me-auto">
           {{ render_nav_item('main.dashboard', 'Dashboard') }}
-          {{ render_nav_item('main.filaments_list', 'Filamentos') }}
-          {{ render_nav_item('main.orders_list', 'Encomendas') }}
-          {{ render_nav_item('main.stats', 'Estatísticas') }}
-          {{ render_nav_item('main.settings', 'Definições') }}
+          {{ render_nav_item('main.filaments_list', 'Filaments') }}
+          {{ render_nav_item('main.orders_list', 'Orders') }}
+          {{ render_nav_item('main.stats', 'Statistics') }}
+          {{ render_nav_item('main.settings', 'Settings') }}
         </ul>
-        <a class="btn btn-primary me-2" href="{{ url_for('main.order_new') }}">+ Nova encomenda</a>
-        <a class="btn btn-outline-light me-2" href="{{ url_for('main.filament_new') }}">+ Filamento</a>
-        <button id="theme-toggle" title="Alternar modo claro/escuro">🌙</button>
+        <a class="btn btn-primary me-2" href="{{ url_for('main.order_new') }}">+ New order</a>
+        <a class="btn btn-outline-light me-2" href="{{ url_for('main.filament_new') }}">+ Filament</a>
+        <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
       </div>
     </div>
   </nav>

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Estatísticas{% endblock %}
+{% block title %}Statistics{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h1 class="h3 mb-0">Estatísticas do negócio</h1>
-  <span class="text-muted small">Apenas encomendas comerciais entregues contam para receitas e lucro</span>
+  <h1 class="h3 mb-0">Business statistics</h1>
+  <span class="text-muted small">Only delivered commercial orders count toward revenue and profit</span>
 </div>
 
 {# ── Row 1: key commercial KPIs ── #}
@@ -11,20 +11,20 @@
   <div class="col-6 col-md-3">
     <div class="card shadow-sm h-100 border-success">
       <div class="card-body">
-        <div class="text-muted small mb-1">Receita total</div>
-        <div class="fs-4 fw-bold text-success">{{ '%.2f'|format(total_revenue) }} €</div>
-        <div class="text-muted small">{{ counts.delivered }} encomendas entregues</div>
+        <div class="text-muted small mb-1">Total revenue</div>
+        <div class="fs-4 fw-bold text-success">{{ '%.2f'|format(total_revenue) }} {{ currency }}</div>
+        <div class="text-muted small">{{ counts.delivered }} orders delivered</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card shadow-sm h-100 border-danger">
       <div class="card-body">
-        <div class="text-muted small mb-1">Custo total (comercial)</div>
-        <div class="fs-4 fw-bold text-danger">{{ '%.2f'|format(total_cost_commercial) }} €</div>
+        <div class="text-muted small mb-1">Total cost (commercial)</div>
+        <div class="fs-4 fw-bold text-danger">{{ '%.2f'|format(total_cost_commercial) }} {{ currency }}</div>
         <div class="text-muted small">
-          Filamentos {{ '%.2f'|format(total_filament_spend_commercial) }} €
-          · Electricidade {{ '%.2f'|format(total_electricity_commercial) }} €
+          Filaments {{ '%.2f'|format(total_filament_spend_commercial) }} {{ currency }}
+          · Electricity {{ '%.2f'|format(total_electricity_commercial) }} {{ currency }}
         </div>
       </div>
     </div>
@@ -32,13 +32,13 @@
   <div class="col-6 col-md-3">
     <div class="card shadow-sm h-100 {% if total_profit >= 0 %}border-primary{% else %}border-danger{% endif %}">
       <div class="card-body">
-        <div class="text-muted small mb-1">Lucro líquido</div>
+        <div class="text-muted small mb-1">Net profit</div>
         <div class="fs-4 fw-bold {% if total_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
-          {{ '+' if total_profit >= 0 else '' }}{{ '%.2f'|format(total_profit) }} €
+          {{ '+' if total_profit >= 0 else '' }}{{ '%.2f'|format(total_profit) }} {{ currency }}
         </div>
         {% if total_revenue > 0 %}
         <div class="text-muted small">
-          Margem {{ '%.1f'|format(total_profit / total_revenue * 100) }} %
+          Margin {{ '%.1f'|format(total_profit / total_revenue * 100) }} %
         </div>
         {% endif %}
       </div>
@@ -47,10 +47,10 @@
   <div class="col-6 col-md-3">
     <div class="card shadow-sm h-100">
       <div class="card-body">
-        <div class="text-muted small mb-1">Encomendas</div>
+        <div class="text-muted small mb-1">Orders</div>
         <div class="fs-4 fw-bold">{{ counts.total }}</div>
         <div class="text-muted small">
-          {{ counts.commercial }} comerciais · {{ counts.internal }} internas
+          {{ counts.commercial }} commercial · {{ counts.internal }} personal
         </div>
       </div>
     </div>
@@ -61,18 +61,18 @@
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="card shadow-sm h-100">
-      <div class="card-header">Tempo de impressão</div>
+      <div class="card-header">Print time</div>
       <ul class="list-group list-group-flush">
         <li class="list-group-item d-flex justify-content-between">
-          <span>Total (todas)</span>
+          <span>Total (all)</span>
           <strong>{{ total_print_hours_all|duration }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span>Comercial</span>
+          <span>Commercial</span>
           <strong>{{ total_print_hours_commercial|duration }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span>Consumo interno</span>
+          <span>Personal use</span>
           <strong>{{ total_print_hours_internal|duration }}</strong>
         </li>
       </ul>
@@ -82,24 +82,24 @@
   <div class="col-md-4">
     <div class="card shadow-sm h-100">
       <div class="card-header">
-        Consumo interno
-        <span class="text-muted small fw-normal ms-1">— custo real, não faturado</span>
+        Personal use
+        <span class="text-muted small fw-normal ms-1">— real cost, not invoiced</span>
       </div>
       <ul class="list-group list-group-flush">
         <li class="list-group-item d-flex justify-content-between">
-          <span>Filamentos</span>
-          <strong>{{ '%.2f'|format(total_filament_spend_internal) }} €</strong>
+          <span>Filaments</span>
+          <strong>{{ '%.2f'|format(total_filament_spend_internal) }} {{ currency }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span>Electricidade</span>
-          <strong>{{ '%.2f'|format(total_electricity_internal) }} €</strong>
+          <span>Electricity</span>
+          <strong>{{ '%.2f'|format(total_electricity_internal) }} {{ currency }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between bg-body-secondary">
           <span>Total</span>
-          <strong>{{ '%.2f'|format(total_filament_spend_internal + total_electricity_internal) }} €</strong>
+          <strong>{{ '%.2f'|format(total_filament_spend_internal + total_electricity_internal) }} {{ currency }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span>Impressões internas</span>
+          <span>Personal prints</span>
           <strong>{{ counts.internal }}</strong>
         </li>
       </ul>
@@ -108,22 +108,22 @@
 
   <div class="col-md-4">
     <div class="card shadow-sm h-100">
-      <div class="card-header">Inventário de filamentos</div>
+      <div class="card-header">Filament inventory</div>
       <ul class="list-group list-group-flush">
         <li class="list-group-item d-flex justify-content-between">
-          <span>Valor em stock</span>
-          <strong>{{ '%.2f'|format(total_stock_value) }} €</strong>
+          <span>Stock value</span>
+          <strong>{{ '%.2f'|format(total_stock_value) }} {{ currency }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span>Peso em stock</span>
+          <span>Stock weight</span>
           <strong>{{ '%.3f'|format(total_stock_kg) }} kg</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span>Total comprado (histórico)</span>
-          <strong>{{ '%.2f'|format(total_filament_purchased_spend) }} €</strong>
+          <span>Total purchased (historical)</span>
+          <strong>{{ '%.2f'|format(total_filament_purchased_spend) }} {{ currency }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span>Referências distintas</span>
+          <span>Distinct references</span>
           <strong>{{ filaments|length }}</strong>
         </li>
       </ul>
@@ -134,7 +134,7 @@
 {# ── Monthly chart ── #}
 {% if monthly_rows %}
 <div class="card shadow-sm mb-4">
-  <div class="card-header">Receitas e lucro por mês</div>
+  <div class="card-header">Revenue and profit by month</div>
   <div class="card-body">
     <canvas id="chartMonthly" height="90"></canvas>
   </div>
@@ -144,7 +144,7 @@
 {# ── Stock chart (full width, dynamic height) ── #}
 {% if chart_stock.labels %}
 <div class="card shadow-sm mb-4">
-  <div class="card-header">Stock por filamento (€)</div>
+  <div class="card-header">Stock by filament ({{ currency }})</div>
   <div class="card-body">
     <canvas id="chartStock" style="min-height: {{ [chart_stock.labels|length * 36, 200]|max }}px"></canvas>
   </div>
@@ -155,19 +155,19 @@
 {% if monthly_rows %}
 <div class="card shadow-sm mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <span>Receitas e lucro por mês</span>
-    <span class="text-muted small">Encomendas comerciais entregues</span>
+    <span>Revenue and profit by month</span>
+    <span class="text-muted small">Delivered commercial orders</span>
   </div>
   <div class="table-responsive">
     <table class="table table-sm mb-0 align-middle">
       <thead>
         <tr>
-          <th>Mês</th>
-          <th class="text-end">Encomendas</th>
-          <th class="text-end">Custo</th>
-          <th class="text-end">Receita</th>
-          <th class="text-end">Lucro</th>
-          <th class="text-end">Margem</th>
+          <th>Month</th>
+          <th class="text-end">Orders</th>
+          <th class="text-end">Cost</th>
+          <th class="text-end">Revenue</th>
+          <th class="text-end">Profit</th>
+          <th class="text-end">Margin</th>
         </tr>
       </thead>
       <tbody>
@@ -175,10 +175,10 @@
         <tr>
           <td>{{ row.label }}</td>
           <td class="text-end">{{ row.orders }}</td>
-          <td class="text-end text-danger">{{ '%.2f'|format(row.cost) }} €</td>
-          <td class="text-end text-success">{{ '%.2f'|format(row.revenue) }} €</td>
+          <td class="text-end text-danger">{{ '%.2f'|format(row.cost) }} {{ currency }}</td>
+          <td class="text-end text-success">{{ '%.2f'|format(row.revenue) }} {{ currency }}</td>
           <td class="text-end {% if row.profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
-            {{ '+' if row.profit >= 0 else '' }}{{ '%.2f'|format(row.profit) }} €
+            {{ '+' if row.profit >= 0 else '' }}{{ '%.2f'|format(row.profit) }} {{ currency }}
           </td>
           <td class="text-end text-muted">
             {% if row.revenue > 0 %}{{ '%.1f'|format(row.profit / row.revenue * 100) }} %{% else %}—{% endif %}
@@ -190,10 +190,10 @@
         <tr class="fw-semibold">
           <td>Total</td>
           <td class="text-end">{{ counts.delivered }}</td>
-          <td class="text-end text-danger">{{ '%.2f'|format(total_cost_commercial) }} €</td>
-          <td class="text-end text-success">{{ '%.2f'|format(total_revenue) }} €</td>
+          <td class="text-end text-danger">{{ '%.2f'|format(total_cost_commercial) }} {{ currency }}</td>
+          <td class="text-end text-success">{{ '%.2f'|format(total_revenue) }} {{ currency }}</td>
           <td class="text-end {% if total_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">
-            {{ '+' if total_profit >= 0 else '' }}{{ '%.2f'|format(total_profit) }} €
+            {{ '+' if total_profit >= 0 else '' }}{{ '%.2f'|format(total_profit) }} {{ currency }}
           </td>
           <td class="text-end text-muted">
             {% if total_revenue > 0 %}{{ '%.1f'|format(total_profit / total_revenue * 100) }} %{% else %}—{% endif %}
@@ -210,16 +210,14 @@
 <div class="row g-3 mb-4">
   <div class="col-md-6">
     <div class="card shadow-sm">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Top filamentos — custo em encomendas comerciais</span>
-      </div>
+      <div class="card-header">Top filaments — cost in commercial orders</div>
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead>
             <tr>
-              <th>Filamento</th>
-              <th class="text-end">Peso usado (g)</th>
-              <th class="text-end">Custo</th>
+              <th>Filament</th>
+              <th class="text-end">Weight used (g)</th>
+              <th class="text-end">Cost</th>
             </tr>
           </thead>
           <tbody>
@@ -232,7 +230,7 @@
                 {% endif %}
               </td>
               <td class="text-end">{{ '%.0f'|format(f.weight_g) }} g</td>
-              <td class="text-end">{{ '%.2f'|format(f.cost) }} €</td>
+              <td class="text-end">{{ '%.2f'|format(f.cost) }} {{ currency }}</td>
             </tr>
           {% endfor %}
           </tbody>
@@ -243,14 +241,14 @@
 
   <div class="col-md-6">
     <div class="card shadow-sm">
-      <div class="card-header">Inventário actual por filamento</div>
+      <div class="card-header">Current inventory by filament</div>
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead>
             <tr>
-              <th>Filamento</th>
+              <th>Filament</th>
               <th class="text-end">Stock (kg)</th>
-              <th class="text-end">Valor</th>
+              <th class="text-end">Value</th>
             </tr>
           </thead>
           <tbody>
@@ -262,7 +260,7 @@
                 <span class="text-muted small">{{ f.material }} · {{ f.color }}</span>
               </td>
               <td class="text-end">{{ '%.3f'|format(f.stock_kg) }}</td>
-              <td class="text-end">{{ '%.2f'|format(f.stock_value) }} €</td>
+              <td class="text-end">{{ '%.2f'|format(f.stock_value) }} {{ currency }}</td>
             </tr>
             {% endif %}
           {% endfor %}
@@ -271,7 +269,7 @@
             <tr class="fw-semibold">
               <td>Total</td>
               <td class="text-end">{{ '%.3f'|format(total_stock_kg) }} kg</td>
-              <td class="text-end">{{ '%.2f'|format(total_stock_value) }} €</td>
+              <td class="text-end">{{ '%.2f'|format(total_stock_value) }} {{ currency }}</td>
             </tr>
           </tfoot>
         </table>
@@ -285,18 +283,18 @@
 <div class="row g-3">
   <div class="col-md-4">
     <div class="card shadow-sm">
-      <div class="card-header">Estado das encomendas</div>
+      <div class="card-header">Order status</div>
       <ul class="list-group list-group-flush">
         <li class="list-group-item d-flex justify-content-between">
-          <span><span class="badge bg-secondary me-2">Pendentes</span></span>
+          <span><span class="badge bg-secondary me-2">Pending</span></span>
           <strong>{{ counts.pending }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span><span class="badge bg-info me-2">Impressas</span></span>
+          <span><span class="badge bg-info me-2">Printed</span></span>
           <strong>{{ counts.printed }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          <span><span class="badge bg-success me-2">Entregues</span></span>
+          <span><span class="badge bg-success me-2">Delivered</span></span>
           <strong>{{ counts.delivered }}</strong>
         </li>
         <li class="list-group-item d-flex justify-content-between bg-body-secondary">
@@ -317,6 +315,7 @@
   const isDark = () => document.documentElement.getAttribute('data-bs-theme') === 'dark';
   const gridColor = () => isDark() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
   const labelColor = () => isDark() ? '#dee2e6' : '#495057';
+  const cur = {{ currency | tojson }};
 
   {% if monthly_rows %}
   const monthlyLabels = {{ chart_monthly.labels | tojson }};
@@ -331,9 +330,9 @@
       data: {
         labels: monthlyLabels,
         datasets: [
-          { label: 'Receita', data: monthlyRevenue, backgroundColor: 'rgba(25,135,84,0.7)', borderRadius: 4 },
-          { label: 'Custo',   data: monthlyCost,    backgroundColor: 'rgba(220,53,69,0.7)',  borderRadius: 4 },
-          { label: 'Lucro',   data: monthlyProfit,  backgroundColor: 'rgba(13,110,253,0.7)', borderRadius: 4, type: 'line', fill: false, tension: 0.3 },
+          { label: 'Revenue', data: monthlyRevenue, backgroundColor: 'rgba(25,135,84,0.7)', borderRadius: 4 },
+          { label: 'Cost',    data: monthlyCost,    backgroundColor: 'rgba(220,53,69,0.7)',  borderRadius: 4 },
+          { label: 'Profit',  data: monthlyProfit,  backgroundColor: 'rgba(13,110,253,0.7)', borderRadius: 4, type: 'line', fill: false, tension: 0.3 },
         ],
       },
       options: {
@@ -341,7 +340,7 @@
         plugins: { legend: { labels: { color: labelColor() } } },
         scales: {
           x: { ticks: { color: labelColor() }, grid: { color: gridColor() } },
-          y: { ticks: { color: labelColor(), callback: v => v.toFixed(2) + ' €' }, grid: { color: gridColor() } },
+          y: { ticks: { color: labelColor(), callback: v => v.toFixed(2) + ' ' + cur }, grid: { color: gridColor() } },
         },
       },
     });
@@ -351,10 +350,6 @@
   {% if chart_stock.labels %}
   const stockLabels = {{ chart_stock.labels | tojson }};
   const stockValues = {{ chart_stock.amounts | tojson }};
-  const stockColors = [
-    '#0d6efd','#198754','#dc3545','#ffc107','#0dcaf0',
-    '#6f42c1','#fd7e14','#20c997','#d63384','#6c757d',
-  ];
   const ctxS = document.getElementById('chartStock');
   if (ctxS) {
     const palette = [
@@ -367,7 +362,7 @@
       data: {
         labels: stockLabels,
         datasets: [{
-          label: 'Valor em stock (€)',
+          label: 'Stock value',
           data: stockValues,
           backgroundColor: barColors,
           borderRadius: 4,
@@ -380,11 +375,11 @@
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x.toFixed(2)} €` } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x.toFixed(2)} ${cur}` } },
         },
         scales: {
           x: {
-            ticks: { color: labelColor(), callback: v => v.toFixed(0) + ' €' },
+            ticks: { color: labelColor(), callback: v => v.toFixed(0) + ' ' + cur },
             grid: { color: gridColor() },
           },
           y: {

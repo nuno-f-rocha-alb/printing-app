@@ -1,28 +1,34 @@
 {% extends "base.html" %}
-{% block title %}Definições{% endblock %}
+{% block title %}Settings{% endblock %}
 {% block content %}
-<h1 class="h3 mb-3">Definições globais</h1>
+<h1 class="h3 mb-3">Global settings</h1>
 <form method="post" class="card shadow-sm">
   <div class="card-body">
     <div class="mb-3">
-      <label class="form-label">Preço da electricidade (€/kWh)</label>
+      <label class="form-label">Electricity price ({{ currency }}/kWh)</label>
       <input type="number" step="0.0001" min="0" name="electricity_price_per_kwh"
              value="{{ electricity_price_per_kwh }}" class="form-control" required>
     </div>
     <div class="mb-3">
-      <label class="form-label">Potência da impressora (W)</label>
+      <label class="form-label">Printer power (W)</label>
       <input type="number" step="0.01" min="0" name="printer_power_watts"
              value="{{ printer_power_watts }}" class="form-control" required>
-      <div class="form-text">Usado para calcular o consumo (W × tempo h ÷ 1000 = kWh).</div>
+      <div class="form-text">Used to calculate electricity cost (W × hours ÷ 1000 = kWh).</div>
     </div>
     <div class="mb-3">
-      <label class="form-label">% lucro por defeito</label>
+      <label class="form-label">Default profit %</label>
       <input type="number" step="0.01" min="0" name="default_profit_pct"
              value="{{ default_profit_pct }}" class="form-control" required>
     </div>
+    <div class="mb-3">
+      <label class="form-label">Currency symbol</label>
+      <input type="text" name="currency_symbol" value="{{ currency_symbol }}"
+             class="form-control" style="max-width:100px" maxlength="5" required>
+      <div class="form-text">Symbol shown throughout the app (e.g. €, $, £).</div>
+    </div>
   </div>
   <div class="card-footer text-end">
-    <button class="btn btn-primary">Guardar</button>
+    <button class="btn btn-primary">Save</button>
   </div>
 </form>
 {% endblock %}

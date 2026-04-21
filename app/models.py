@@ -15,6 +15,7 @@ class Setting(db.Model):
         "electricity_price_per_kwh": "0.1600",
         "printer_power_watts": "250",
         "default_profit_pct": "30",
+        "currency_symbol": "€",
     }
 
     @classmethod

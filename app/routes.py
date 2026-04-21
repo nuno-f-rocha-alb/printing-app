@@ -109,8 +109,10 @@ def settings():
             "default_profit_pct",
             _dec(request.form.get("default_profit_pct")),
         )
+        currency = request.form.get("currency_symbol", "€").strip() or "€"
+        Setting.set("currency_symbol", currency)
         db.session.commit()
-        flash("Definições guardadas.", "success")
+        flash("Settings saved.", "success")
         return redirect(url_for("main.settings"))
 
     return render_template(
@@ -118,6 +120,7 @@ def settings():
         electricity_price_per_kwh=Setting.get("electricity_price_per_kwh"),
         printer_power_watts=Setting.get("printer_power_watts"),
         default_profit_pct=Setting.get("default_profit_pct"),
+        currency_symbol=Setting.get("currency_symbol", cast=str) or "€",
     )
 
 
@@ -172,14 +175,14 @@ def filament_new():
         price_per_kg = _dec(request.form.get("price_per_kg"))
 
         if not name:
-            flash("Nome é obrigatório.", "danger")
+            flash("Name is required.", "danger")
             return redirect(url_for("main.filament_new"))
 
         existing = Filament.query.filter_by(name=name, material=material, color=color).first()
         if existing:
             flash(
-                f"O filamento '{name} · {material} · {color}' já existe. "
-                f"Usa o botão Comprar para adicionar mais stock.",
+                f"Filament '{name} · {material} · {color}' already exists. "
+                f"Use the Buy button to add more stock.",
                 "warning",
             )
             return redirect(url_for("main.filaments_list"))
@@ -190,7 +193,7 @@ def filament_new():
         if stock_g > 0 and price_per_kg > 0:
             f.add_purchase(stock_g, price_per_kg)
         db.session.commit()
-        flash("Filamento criado.", "success")
+        flash("Filament created.", "success")
         return redirect(url_for("main.filaments_list"))
 
     return render_template("filament_form.html")
@@ -203,13 +206,13 @@ def filament_purchase(fid):
         quantity_g = _dec(request.form.get("quantity_g"))
         price_per_kg = _dec(request.form.get("price_per_kg"))
         if quantity_g <= 0 or price_per_kg <= 0:
-            flash("Quantidade e preço têm de ser positivos.", "danger")
+            flash("Quantity and price must be positive.", "danger")
             return redirect(url_for("main.filament_purchase", fid=f.id))
         f.add_purchase(quantity_g, price_per_kg)
         db.session.commit()
         flash(
-            f"Adicionado {quantity_g} g. Novo preço médio: "
-            f"{f.avg_price_per_kg:.2f} €/kg.",
+            f"Added {quantity_g} g. New weighted average: "
+            f"{f.avg_price_per_kg:.2f}/kg.",
             "success",
         )
         return redirect(url_for("main.filaments_list"))
@@ -227,11 +230,11 @@ def filament_adjust(fid):
     f = Filament.query.get_or_404(fid)
     new_stock = _dec(request.form.get("stock_g"), default=None)
     if new_stock is None or new_stock < 0:
-        flash("Valor de stock inválido.", "danger")
+        flash("Invalid stock value.", "danger")
         return redirect(url_for("main.filament_purchase", fid=f.id))
     f.stock_g = new_stock
     db.session.commit()
-    flash(f"Stock de {f.name} ajustado para {new_stock} g.", "success")
+    flash(f"Stock for {f.name} adjusted to {new_stock} g.", "success")
     return redirect(url_for("main.filaments_list"))
 
 
@@ -240,7 +243,7 @@ def filament_delete(fid):
     f = Filament.query.get_or_404(fid)
     db.session.delete(f)
     db.session.commit()
-    flash("Filamento removido.", "success")
+    flash("Filament deleted.", "success")
     return redirect(url_for("main.filaments_list"))
 
 
@@ -291,11 +294,11 @@ def order_new():
             num_plates = 0
 
         if not name:
-            flash("Nome é obrigatório.", "danger")
+            flash("Name is required.", "danger")
             return redirect(url_for("main.order_new"))
 
         if num_plates < 1:
-            flash("Adicione pelo menos um prato.", "danger")
+            flash("Add at least one plate.", "danger")
             return redirect(url_for("main.order_new"))
 
         # Parse all plates
@@ -308,7 +311,7 @@ def order_new():
             weights = request.form.getlist(f"plate_{i}_weights")
 
             if pt <= 0:
-                flash(f"Prato {i + 1}: tempo de impressão tem de ser positivo.", "danger")
+                flash(f"Plate {i + 1}: print time must be positive.", "danger")
                 return redirect(url_for("main.order_new"))
 
             plate_items = []
@@ -321,13 +324,13 @@ def order_new():
                 plate_items.append((int(fid_s), w))
 
             if not plate_items:
-                flash(f"Prato {i + 1}: adicione pelo menos um filamento com peso > 0.", "danger")
+                flash(f"Plate {i + 1}: add at least one filament with weight > 0.", "danger")
                 return redirect(url_for("main.order_new"))
 
             plates_data.append((pt, plate_items))
 
         if not plates_data:
-            flash("Adicione pelo menos um prato.", "danger")
+            flash("Add at least one plate.", "danger")
             return redirect(url_for("main.order_new"))
 
         # Aggregate stock usage per filament across all plates
@@ -341,12 +344,12 @@ def order_new():
         for fid, total_w in filament_usage.items():
             f = db.session.get(Filament, fid)
             if f is None:
-                flash("Filamento inválido.", "danger")
+                flash("Invalid filament.", "danger")
                 return redirect(url_for("main.order_new"))
             if Decimal(str(f.stock_g or 0)) < total_w:
                 flash(
-                    f"Stock insuficiente para {f.name} ({f.color}). "
-                    f"Disponível: {f.stock_g} g, pedido total: {total_w} g.",
+                    f"Insufficient stock for {f.name} ({f.color}). "
+                    f"Available: {f.stock_g} g, total requested: {total_w} g.",
                     "danger",
                 )
                 return redirect(url_for("main.order_new"))
@@ -390,7 +393,7 @@ def order_new():
             filament_objs[fid].stock_g = Decimal(str(filament_objs[fid].stock_g or 0)) - total_w
 
         db.session.commit()
-        flash("Encomenda criada e stock atualizado.", "success")
+        flash("Order created and stock updated.", "success")
         return redirect(url_for("main.order_detail", oid=order.id))
 
     return render_template(
@@ -431,7 +434,7 @@ def order_delete(oid):
                 it.filament.stock_g = Decimal(str(it.filament.stock_g or 0)) + Decimal(str(it.weight_g))
     db.session.delete(order)
     db.session.commit()
-    flash("Encomenda removida e stock reposto.", "success")
+    flash("Order deleted and stock restored.", "success")
     return redirect(url_for("main.orders_list"))
 
 
