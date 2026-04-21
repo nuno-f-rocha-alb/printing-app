@@ -18,7 +18,7 @@ services:
       retries: 10
 
   app:
-    image: nunobifes/printing-app 
+    image: nunobifes/spoolwise
     restart: unless-stopped
     depends_on:
       db:

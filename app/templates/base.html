@@ -4,7 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}3D Print Manager{% endblock %}</title>
+  <title>{% block title %}Spoolwise{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
   {{ bootstrap.load_css() }}
   <style>
     body { padding-top: 4.5rem; }
@@ -23,7 +24,10 @@
 <body>
   <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
     <div class="container-fluid">
-      <a class="navbar-brand" href="{{ url_for('main.dashboard') }}">🖨️ 3D Print Manager</a>
+      <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.dashboard') }}">
+        <img src="{{ url_for('static', filename='logo.svg') }}" width="28" height="28" alt="">
+        Spoolwise
+      </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
         <span class="navbar-toggler-icon"></span>
       </button>

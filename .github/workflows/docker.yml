@@ -26,4 +26,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: nunobifes/printing-app:latest
+          tags: nunobifes/spoolwise:latest

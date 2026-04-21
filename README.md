@@ -1,4 +1,4 @@
-# 3D Print Manager
+# Spoolwise
 
 A self-hosted web app to manage 3D print orders, filament inventory, costs and business statistics.
 
@@ -46,8 +46,8 @@ A self-hosted web app to manage 3D print orders, filament inventory, costs and b
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/nunobifes/printing-app.git
-cd printing-app
+git clone https://github.com/nunobifes/spoolwise.git
+cd spoolwise
 cp .env.example .env
 ```
 
@@ -104,7 +104,7 @@ services:
       retries: 10
 
   app:
-    image: nunobifes/printing-app
+    image: nunobifes/spoolwise
     restart: unless-stopped
     depends_on:
       db:
@@ -155,7 +155,7 @@ To update after a new image is pushed to Docker Hub:
 
 ## CI/CD
 
-Pushing to `main` triggers a GitHub Actions workflow (`.github/workflows/docker.yml`) that builds the Docker image and pushes it to Docker Hub as `nunobifes/printing-app:latest`.
+Pushing to `main` triggers a GitHub Actions workflow (`.github/workflows/docker.yml`) that builds the Docker image and pushes it to Docker Hub as `nunobifes/spoolwise:latest`.
 
 **Required repository secrets** (GitHub → Settings → Secrets and variables → Actions):
 
@@ -188,7 +188,7 @@ new_avg = (current_stock_kg × current_avg + purchase_kg × purchase_price)
 ## Project structure
 
 ```
-printing-app/
+spoolwise/
 ├── app/
 │   ├── __init__.py       # app factory, DB retry loop, additive migrations
 │   ├── models.py         # SQLAlchemy models and business logic

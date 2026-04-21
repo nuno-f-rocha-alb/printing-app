@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Spool body -->
+  <ellipse cx="32" cy="14" rx="22" ry="7" fill="#0d6efd"/>
+  <ellipse cx="32" cy="50" rx="22" ry="7" fill="#0d6efd"/>
+  <rect x="10" y="14" width="44" height="36" fill="#0d6efd"/>
+  <!-- Spool inner cylinder -->
+  <ellipse cx="32" cy="14" rx="12" ry="4" fill="#cfe2ff"/>
+  <rect x="20" y="14" width="24" height="36" fill="#cfe2ff"/>
+  <ellipse cx="32" cy="50" rx="12" ry="4" fill="#9ec5fe"/>
+  <!-- Filament wound around spool -->
+  <ellipse cx="32" cy="32" rx="12" ry="4" fill="none" stroke="#fd7e14" stroke-width="2.5" stroke-dasharray="8 4"/>
+  <ellipse cx="32" cy="38" rx="12" ry="4" fill="none" stroke="#fd7e14" stroke-width="2.5" stroke-dasharray="8 4"/>
+  <ellipse cx="32" cy="26" rx="12" ry="4" fill="none" stroke="#fd7e14" stroke-width="2.5" stroke-dasharray="8 4"/>
+</svg>
