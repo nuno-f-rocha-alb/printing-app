@@ -32,6 +32,25 @@ def _run_additive_migrations(app):
             )
             conn.commit()
 
+        # print_plates.printed_at + is_skipped — per-plate print tracking
+        for col_def in [
+            ("printed_at", "DATETIME NULL"),
+            ("is_skipped",  "TINYINT(1) NOT NULL DEFAULT 0"),
+        ]:
+            col_name, col_spec = col_def
+            result = conn.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                    "WHERE table_schema = DATABASE() "
+                    "AND table_name = 'print_plates' "
+                    "AND column_name = :col"
+                ),
+                {"col": col_name},
+            )
+            if result.scalar() == 0:
+                conn.execute(text(f"ALTER TABLE print_plates ADD COLUMN {col_name} {col_spec}"))
+                conn.commit()
+
         # filaments.color_hex — added for Bambu color hex support
         result = conn.execute(
             text(

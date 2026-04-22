@@ -191,6 +191,8 @@ class PrintPlate(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey("print_orders.id"), nullable=False)
     position = db.Column(db.Integer, nullable=False, default=1)
     print_time_hours = db.Column(Numeric(8, 2), nullable=False)
+    printed_at = db.Column(db.DateTime, nullable=True)
+    is_skipped = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     items = db.relationship(

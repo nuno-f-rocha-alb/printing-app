@@ -1,8 +1,9 @@
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from html.parser import HTMLParser
 import re
 import requests as http_requests
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 
 from .models import (
     db,
@@ -14,6 +15,16 @@ from .models import (
     PrintPlate,
     PlateFilament,
 )
+
+
+def _sync_order_printed(order):
+    """Set or clear order.printed_at based on per-plate printed state."""
+    active = [p for p in order.plates if not p.is_skipped]
+    if active and all(p.printed_at for p in active):
+        if not order.printed_at:
+            order.printed_at = datetime.utcnow()
+    else:
+        order.printed_at = None
 
 bp = Blueprint("main", __name__)
 
@@ -432,9 +443,45 @@ def order_detail(oid):
 @bp.route("/orders/<int:oid>/printed", methods=["POST"])
 def order_mark_printed(oid):
     order = PrintOrder.query.get_or_404(oid)
-    order.mark_printed(request.form.get("value") == "1")
+    marking = request.form.get("value") == "1"
+    order.mark_printed(marking)
+    now = datetime.utcnow() if marking else None
+    for plate in order.plates:
+        if not plate.is_skipped:
+            plate.printed_at = now
     db.session.commit()
     return redirect(request.referrer or url_for("main.orders_list"))
+
+
+@bp.route("/orders/<int:oid>/plates/<int:pid>/toggle-printed", methods=["POST"])
+def plate_toggle_printed(oid, pid):
+    plate = PrintPlate.query.get_or_404(pid)
+    plate.printed_at = None if plate.printed_at else datetime.utcnow()
+    _sync_order_printed(plate.order)
+    db.session.commit()
+    order = plate.order
+    return jsonify({
+        "plate_printed": plate.printed_at is not None,
+        "order_status": order.status,
+        "order_printed_at": order.printed_at.strftime("%Y-%m-%d %H:%M") if order.printed_at else None,
+    })
+
+
+@bp.route("/orders/<int:oid>/plates/<int:pid>/toggle-skipped", methods=["POST"])
+def plate_toggle_skipped(oid, pid):
+    plate = PrintPlate.query.get_or_404(pid)
+    plate.is_skipped = not plate.is_skipped
+    if plate.is_skipped:
+        plate.printed_at = None
+    _sync_order_printed(plate.order)
+    db.session.commit()
+    order = plate.order
+    return jsonify({
+        "plate_skipped": plate.is_skipped,
+        "plate_printed": plate.printed_at is not None,
+        "order_status": order.status,
+        "order_printed_at": order.printed_at.strftime("%Y-%m-%d %H:%M") if order.printed_at else None,
+    })
 
 
 @bp.route("/orders/<int:oid>/delivered", methods=["POST"])

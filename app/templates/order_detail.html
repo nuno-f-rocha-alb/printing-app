@@ -21,10 +21,27 @@
   <div class="col-md-7">
 
     {% for plate in order.plates %}
-    <div class="card shadow-sm mb-3">
+    <div class="card shadow-sm mb-3 plate-card{% if plate.is_skipped %} opacity-50{% endif %}"
+         id="plate-card-{{ plate.id }}" data-plate-id="{{ plate.id }}" data-order-id="{{ order.id }}">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Plate {{ plate.position }}</span>
-        <span class="text-muted small">{{ plate.print_time_hours|duration }} · {{ '%.2f'|format(plate.total_cost) }} {{ currency }}</span>
+        <div class="d-flex align-items-center gap-3">
+          <span class="fw-semibold">Plate {{ plate.position }}</span>
+          {% if not plate.is_skipped %}
+          <div class="form-check mb-0">
+            <input class="form-check-input plate-printed-cb" type="checkbox" id="pp{{ plate.id }}"
+                   {% if plate.printed_at %}checked{% endif %}>
+            <label class="form-check-label small" for="pp{{ plate.id }}">Printed</label>
+          </div>
+          {% else %}
+          <span class="badge bg-warning text-dark">Skipped</span>
+          {% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm {% if plate.is_skipped %}btn-warning{% else %}btn-outline-secondary{% endif %} plate-skip-btn">
+            {{ 'Unskip' if plate.is_skipped else 'Skip' }}
+          </button>
+          <span class="text-muted small">{{ plate.print_time_hours|duration }} · {{ '%.2f'|format(plate.total_cost) }} {{ currency }}</span>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="table mb-0 table-sm">
@@ -95,11 +112,11 @@
       <div class="card-body">
         <div class="d-flex gap-2 align-items-center mb-2">
           {% if order.status == 'delivered' %}
-            <span class="badge bg-success fs-6">Delivered</span>
+            <span class="badge bg-success fs-6" id="order-status-badge">Delivered</span>
           {% elif order.status == 'printed' %}
-            <span class="badge bg-info fs-6">Printed</span>
+            <span class="badge bg-info fs-6" id="order-status-badge">Printed</span>
           {% else %}
-            <span class="badge bg-secondary fs-6">Pending</span>
+            <span class="badge bg-secondary fs-6" id="order-status-badge">Pending</span>
           {% endif %}
         </div>
 
@@ -184,4 +201,43 @@
     </form>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function updateOrderBadge(status) {
+  const badge = document.getElementById('order-status-badge');
+  if (!badge) return;
+  const map = { delivered: ['bg-success','Delivered'], printed: ['bg-info','Printed'], pending: ['bg-secondary','Pending'] };
+  badge.className = `badge fs-6 ${map[status][0]}`;
+  badge.textContent = map[status][1];
+}
+
+document.querySelectorAll('.plate-card').forEach(card => {
+  const oid = card.dataset.orderId;
+  const pid = card.dataset.plateId;
+
+  const cb = card.querySelector('.plate-printed-cb');
+  if (cb) {
+    cb.addEventListener('change', async () => {
+      cb.disabled = true;
+      const res  = await fetch(`/orders/${oid}/plates/${pid}/toggle-printed`, { method: 'POST' });
+      const data = await res.json();
+      cb.checked  = data.plate_printed;
+      cb.disabled = false;
+      updateOrderBadge(data.order_status);
+    });
+  }
+
+  const skipBtn = card.querySelector('.plate-skip-btn');
+  if (skipBtn) {
+    skipBtn.addEventListener('click', async () => {
+      skipBtn.disabled = true;
+      const res  = await fetch(`/orders/${oid}/plates/${pid}/toggle-skipped`, { method: 'POST' });
+      const data = await res.json();
+      updateOrderBadge(data.order_status);
+      location.reload();
+    });
+  }
+});
+</script>
 {% endblock %}
