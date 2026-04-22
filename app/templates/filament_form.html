@@ -11,11 +11,16 @@
       </div>
       <div class="col-md-3">
         <label class="form-label">Material</label>
-        <input name="material" class="form-control" value="PLA">
+        <input name="material" id="materialInput" class="form-control" value="PLA">
       </div>
       <div class="col-md-3">
         <label class="form-label">Color</label>
-        <input name="color" class="form-control" placeholder="e.g. Black">
+        <div class="input-group">
+          <input name="color" id="colorName" class="form-control" placeholder="e.g. Black">
+          <input type="color" id="colorPicker" name="color_hex" value="#000000"
+                 class="form-control form-control-color" title="Color hex — auto-filled from Bambu palette">
+        </div>
+        <div class="form-text" id="colorHint"></div>
       </div>
       <div class="col-md-6">
         <label class="form-label">Initial stock (g) <span class="text-muted">(optional)</span></label>
@@ -32,4 +37,41 @@
     <button class="btn btn-primary">Create</button>
   </div>
 </form>
+{% endblock %}
+{% block scripts %}
+<script>
+let BAMBU = null;
+fetch("{{ url_for('static', filename='bambu_colors.json') }}")
+  .then(r => r.json())
+  .then(data => { BAMBU = data; });
+
+function lookupHex(material, color) {
+  if (!BAMBU || !color) return null;
+  if (BAMBU[material] && BAMBU[material][color]) return { hex: BAMBU[material][color], exact: true };
+  const colorLower = color.toLowerCase();
+  for (const [mat, colors] of Object.entries(BAMBU)) {
+    for (const [name, hex] of Object.entries(colors)) {
+      if (name.toLowerCase() === colorLower) return { hex, exact: mat === material };
+    }
+  }
+  return null;
+}
+
+function tryAutoFill() {
+  const mat = document.getElementById('materialInput').value.trim();
+  const col = document.getElementById('colorName').value.trim();
+  const hint = document.getElementById('colorHint');
+  const result = lookupHex(mat, col);
+  if (result) {
+    document.getElementById('colorPicker').value = result.hex;
+    hint.textContent = result.exact ? '✓ Bambu color matched' : '~ Color matched from another material';
+    hint.className = 'form-text text-success';
+  } else if (col) {
+    hint.textContent = '';
+  }
+}
+
+document.getElementById('colorName').addEventListener('input', tryAutoFill);
+document.getElementById('materialInput').addEventListener('input', tryAutoFill);
+</script>
 {% endblock %}

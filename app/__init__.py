@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from flask import Flask
@@ -30,6 +31,47 @@ def _run_additive_migrations(app):
                 )
             )
             conn.commit()
+
+        # filaments.color_hex — added for Bambu color hex support
+        result = conn.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                "WHERE table_schema = DATABASE() "
+                "AND table_name = 'filaments' "
+                "AND column_name = 'color_hex'"
+            )
+        )
+        if result.scalar() == 0:
+            conn.execute(text("ALTER TABLE filaments ADD COLUMN color_hex VARCHAR(7) NULL"))
+            conn.commit()
+
+
+def _lookup_bambu_hex(bambu, material, color):
+    if material in bambu and color in bambu[material]:
+        return bambu[material][color]
+    color_lower = color.lower()
+    for mat_colors in bambu.values():
+        for col_name, hex_val in mat_colors.items():
+            if col_name.lower() == color_lower:
+                return hex_val
+    return None
+
+
+def _backfill_color_hex(app):
+    """Populate color_hex for filaments that don't have one yet."""
+    bambu_path = os.path.join(app.root_path, "static", "bambu_colors.json")
+    if not os.path.exists(bambu_path):
+        return
+    with open(bambu_path) as f:
+        bambu = json.load(f)
+
+    from .models import Filament
+    to_update = Filament.query.filter(Filament.color_hex.is_(None)).all()
+    for fil in to_update:
+        hex_val = _lookup_bambu_hex(bambu, fil.material.strip(), fil.color.strip())
+        if hex_val:
+            fil.color_hex = hex_val
+    db.session.commit()
 
 
 def create_app():
@@ -74,6 +116,7 @@ def create_app():
                 time.sleep(3)
         # Additive migrations: add columns introduced after initial schema
         _run_additive_migrations(app)
+        _backfill_color_hex(app)
         from .models import Setting
         Setting.ensure_defaults()
         db.session.commit()

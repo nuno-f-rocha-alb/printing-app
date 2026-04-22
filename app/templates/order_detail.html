@@ -41,7 +41,7 @@
             <tr>
               <td>
                 {{ it.filament.name if it.filament else '(removed)' }}
-                <span class="text-muted small">{{ it.filament.color if it.filament else '' }}</span>
+                {% if it.filament %}<span class="badge-swatch" style="background-color: {{ it.filament.color_hex or it.filament.color }}"></span><span class="text-muted small">{{ it.filament.color }}</span>{% endif %}
               </td>
               <td class="text-end">{{ '%.2f'|format(it.weight_g) }}</td>
               <td class="text-end">{{ '%.2f'|format(it.price_per_kg_snapshot) }}</td>

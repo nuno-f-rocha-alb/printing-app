@@ -49,7 +49,7 @@
           <td>{{ f.name }}</td>
           <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ f.material }}</span></td>
           <td>
-            <span class="badge-swatch" style="background-color: {{ f.color }}"></span>{{ f.color }}
+            <span class="badge-swatch" style="background-color: {{ f.color_hex or f.color }}"></span>{{ f.color }}
           </td>
           <td class="text-end {% if f.stock_kg <= 0.1 %}text-danger fw-bold{% endif %}">
             {{ '%.3f'|format(f.stock_kg) }}

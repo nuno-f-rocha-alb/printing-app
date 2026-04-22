@@ -171,6 +171,7 @@ def filament_new():
         name = request.form.get("name", "").strip()
         material = request.form.get("material", "PLA").strip()
         color = request.form.get("color", "").strip()
+        color_hex = request.form.get("color_hex", "").strip() or None
         stock_g = _dec(request.form.get("stock_g"))
         price_per_kg = _dec(request.form.get("price_per_kg"))
 
@@ -187,7 +188,7 @@ def filament_new():
             )
             return redirect(url_for("main.filaments_list"))
 
-        f = Filament(name=name, material=material, color=color)
+        f = Filament(name=name, material=material, color=color, color_hex=color_hex)
         db.session.add(f)
         db.session.flush()
         if stock_g > 0 and price_per_kg > 0:
@@ -561,6 +562,7 @@ def stats():
     chart_stock = {
         "labels": [f"{f.name} {f.material} {f.color}" for f in stock_filaments_sorted],
         "amounts": [float(f.stock_value) for f in stock_filaments_sorted],
+        "colors": [f.color_hex or "#6c757d" for f in stock_filaments_sorted],
     }
 
     return render_template(

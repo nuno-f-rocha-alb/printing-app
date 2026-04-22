@@ -43,7 +43,7 @@
             <tr>
               <td>{{ f.name }}</td>
               <td>{{ f.material }}</td>
-              <td>{{ f.color }}</td>
+              <td><span class="badge-swatch" style="background-color: {{ f.color_hex or f.color }}"></span>{{ f.color }}</td>
               <td class="text-end">{{ '%.2f'|format(f.stock_kg) }} kg</td>
               <td class="text-end">{{ '%.2f'|format(f.avg_price_per_kg) }} {{ currency }}/kg</td>
             </tr>

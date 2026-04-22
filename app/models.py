@@ -47,6 +47,7 @@ class Filament(db.Model):
     name = db.Column(db.String(120), nullable=False)
     material = db.Column(db.String(40), nullable=False, default="PLA")
     color = db.Column(db.String(40), nullable=False, default="")
+    color_hex = db.Column(db.String(7), nullable=True)
     stock_g = db.Column(Numeric(12, 2), nullable=False, default=0)
     avg_price_per_kg = db.Column(Numeric(12, 4), nullable=False, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
