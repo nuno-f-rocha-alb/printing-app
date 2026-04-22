@@ -80,27 +80,7 @@
           <button type="button" class="btn btn-sm btn-outline-secondary add-filament">+ Filament</button>
         </div>
         <div class="filament-rows">
-          <div class="row g-2 align-items-end mb-2 fil-row">
-            <div class="col-md-8">
-              <label class="form-label">Filament</label>
-              <select name="plate_0_filament_ids" class="form-select" required>
-                <option value="">— choose —</option>
-                {% for f in filaments %}
-                  <option value="{{ f.id }}">
-                    {{ f.name }} · {{ f.material }} · {{ f.color }}
-                    (stock {{ '%.0f'|format(f.stock_g) }} g, {{ '%.2f'|format(f.avg_price_per_kg) }} {{ currency }}/kg)
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Weight (g)</label>
-              <input name="plate_0_weights" type="number" step="0.01" min="0.01" class="form-control" required>
-            </div>
-            <div class="col-md-1">
-              <button type="button" class="btn btn-outline-danger w-100 remove-filament">×</button>
-            </div>
-          </div>
+          <div class="fil-row mb-2"></div>
         </div>
       </div>
     </div>
@@ -137,27 +117,7 @@
         <button type="button" class="btn btn-sm btn-outline-secondary add-filament">+ Filament</button>
       </div>
       <div class="filament-rows">
-        <div class="row g-2 align-items-end mb-2 fil-row">
-          <div class="col-md-8">
-            <label class="form-label">Filament</label>
-            <select class="form-select" required>
-              <option value="">— choose —</option>
-              {% for f in filaments %}
-                <option value="{{ f.id }}">
-                  {{ f.name }} · {{ f.material }} · {{ f.color }}
-                  (stock {{ '%.0f'|format(f.stock_g) }} g, {{ '%.2f'|format(f.avg_price_per_kg) }} {{ currency }}/kg)
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Weight (g)</label>
-            <input type="number" step="0.01" min="0.01" class="form-control" required>
-          </div>
-          <div class="col-md-1">
-            <button type="button" class="btn btn-outline-danger w-100 remove-filament">×</button>
-          </div>
-        </div>
+        <div class="fil-row mb-2"></div>
       </div>
     </div>
   </div>
@@ -166,55 +126,196 @@
 
 {% block scripts %}
 <script>
-  const container = document.getElementById('plates-container');
-  const tmpl = document.getElementById('plate-template');
+const FILAMENTS = {{ filaments_data | tojson }};
+const CUR = '{{ currency }}';
 
-  function reindex() {
-    const plates = container.querySelectorAll('.plate-card');
-    document.getElementById('num_plates').value = plates.length;
-    plates.forEach((card, pi) => {
-      card.querySelector('.plate-label').textContent = `Plate ${pi + 1}`;
-      card.querySelector('.plate-hours').name = `plate_${pi}_hours`;
-      card.querySelector('.plate-minutes').name = `plate_${pi}_minutes`;
-      card.querySelectorAll('.filament-rows select').forEach(s => {
-        s.name = `plate_${pi}_filament_ids`;
-      });
-      card.querySelectorAll('.filament-rows input[type="number"]').forEach(i => {
-        i.name = `plate_${pi}_weights`;
-      });
-    });
-  }
+const BRANDS = [...new Set(FILAMENTS.map(f => f.brand))].sort();
 
-  document.getElementById('add-plate').addEventListener('click', () => {
-    const clone = tmpl.content.cloneNode(true);
-    container.appendChild(clone);
-    reindex();
+// ── build a fil-row DOM element ───────────────────────────────────────────────
+function buildFilRow() {
+  const wrap = document.createElement('div');
+  wrap.className = 'fil-row mb-2';
+  wrap.innerHTML = `
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1 text-muted">Brand</label>
+        <select class="form-select form-select-sm fil-brand"></select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1 text-muted">Material</label>
+        <select class="form-select form-select-sm fil-material" disabled></select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1 text-muted">Color</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text p-1 px-2">
+            <span class="fil-swatch" style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#9e9e9e;border:1px solid rgba(128,128,128,.4)"></span>
+          </span>
+          <select class="form-select form-select-sm fil-color" disabled></select>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1 text-muted">Weight (g)</label>
+        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm fil-weight" required>
+      </div>
+      <div class="col-md-1">
+        <button type="button" class="btn btn-outline-danger btn-sm w-100 remove-filament">×</button>
+      </div>
+    </div>
+    <div class="fil-stock-info text-muted small mt-1 ps-1 d-none"></div>
+    <input type="hidden" class="fil-id-hidden">
+  `;
+
+  // populate brand
+  const brandSel = wrap.querySelector('.fil-brand');
+  brandSel.innerHTML = '<option value="">— brand —</option>';
+  BRANDS.forEach(b => {
+    const o = document.createElement('option');
+    o.value = b; o.textContent = b;
+    brandSel.appendChild(o);
   });
 
-  container.addEventListener('click', e => {
-    if (e.target.classList.contains('remove-plate')) {
-      if (container.querySelectorAll('.plate-card').length > 1) {
-        e.target.closest('.plate-card').remove();
-        reindex();
-      }
+  // events
+  brandSel.addEventListener('change', () => onBrandChange(wrap));
+  wrap.querySelector('.fil-material').addEventListener('change', () => onMaterialChange(wrap));
+  wrap.querySelector('.fil-color').addEventListener('change', () => onColorChange(wrap));
+
+  return wrap;
+}
+
+// ── cascade handlers ──────────────────────────────────────────────────────────
+function onBrandChange(row) {
+  const brand   = row.querySelector('.fil-brand').value;
+  const matSel  = row.querySelector('.fil-material');
+  const colSel  = row.querySelector('.fil-color');
+
+  const materials = [...new Set(
+    FILAMENTS.filter(f => f.brand === brand).map(f => f.material)
+  )].sort();
+
+  matSel.innerHTML = '<option value="">— material —</option>';
+  materials.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m; o.textContent = m;
+    matSel.appendChild(o);
+  });
+  matSel.disabled = !brand;
+
+  colSel.innerHTML = '<option value="">— color —</option>';
+  colSel.disabled = true;
+
+  row.querySelector('.fil-id-hidden').value = '';
+  row.querySelector('.fil-swatch').style.background = '#9e9e9e';
+  row.querySelector('.fil-stock-info').classList.add('d-none');
+}
+
+function onMaterialChange(row) {
+  const brand    = row.querySelector('.fil-brand').value;
+  const material = row.querySelector('.fil-material').value;
+  const colSel   = row.querySelector('.fil-color');
+
+  const matching = FILAMENTS.filter(f => f.brand === brand && f.material === material);
+
+  colSel.innerHTML = '<option value="">— color —</option>';
+  matching.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f.id;
+    o.textContent = f.color;
+    o.dataset.hex   = f.color_hex;
+    o.dataset.stock = f.stock_g;
+    o.dataset.price = f.avg_price;
+    colSel.appendChild(o);
+  });
+  colSel.disabled = !material;
+
+  row.querySelector('.fil-id-hidden').value = '';
+  row.querySelector('.fil-swatch').style.background = '#9e9e9e';
+  row.querySelector('.fil-stock-info').classList.add('d-none');
+}
+
+function onColorChange(row) {
+  const colSel = row.querySelector('.fil-color');
+  const opt    = colSel.options[colSel.selectedIndex];
+  const filId  = colSel.value;
+
+  row.querySelector('.fil-id-hidden').value = filId;
+
+  const swatch = row.querySelector('.fil-swatch');
+  const info   = row.querySelector('.fil-stock-info');
+
+  if (filId && opt) {
+    const hex   = opt.dataset.hex || '#9e9e9e';
+    const stock = parseFloat(opt.dataset.stock || 0);
+    const price = parseFloat(opt.dataset.price || 0);
+    swatch.style.background = hex || '#9e9e9e';
+    info.innerHTML = `<span class="badge bg-secondary-subtle text-secondary-emphasis me-1">Stock: ${stock.toFixed(0)} g</span><span class="badge bg-secondary-subtle text-secondary-emphasis">${price.toFixed(2)} ${CUR}/kg</span>`;
+    info.classList.remove('d-none');
+  } else {
+    swatch.style.background = '#9e9e9e';
+    info.classList.add('d-none');
+  }
+}
+
+// ── reindex: assign names to hidden inputs and weight inputs ──────────────────
+function reindex() {
+  const plates = container.querySelectorAll('.plate-card');
+  document.getElementById('num_plates').value = plates.length;
+  plates.forEach((card, pi) => {
+    card.querySelector('.plate-label').textContent = `Plate ${pi + 1}`;
+    card.querySelector('.plate-hours').name   = `plate_${pi}_hours`;
+    card.querySelector('.plate-minutes').name = `plate_${pi}_minutes`;
+    card.querySelectorAll('.fil-id-hidden').forEach(h => h.name = `plate_${pi}_filament_ids`);
+    card.querySelectorAll('.fil-weight').forEach(i => i.name = `plate_${pi}_weights`);
+  });
+}
+
+// ── init existing empty fil-row placeholders ──────────────────────────────────
+function initEmptyRows() {
+  document.querySelectorAll('.fil-row').forEach(placeholder => {
+    if (!placeholder.querySelector('.fil-brand')) {
+      const built = buildFilRow();
+      placeholder.replaceWith(built);
     }
-    if (e.target.classList.contains('add-filament')) {
-      const rows = e.target.closest('.plate-card').querySelector('.filament-rows');
-      const clone = rows.querySelector('.fil-row').cloneNode(true);
-      clone.querySelector('select').value = '';
-      clone.querySelector('input[type="number"]').value = '';
-      rows.appendChild(clone);
+  });
+}
+
+// ── plate + filament add/remove ───────────────────────────────────────────────
+const container = document.getElementById('plates-container');
+const tmpl      = document.getElementById('plate-template');
+
+document.getElementById('add-plate').addEventListener('click', () => {
+  const clone = tmpl.content.cloneNode(true);
+  container.appendChild(clone);
+  initEmptyRows();
+  reindex();
+});
+
+container.addEventListener('click', e => {
+  if (e.target.classList.contains('remove-plate')) {
+    if (container.querySelectorAll('.plate-card').length > 1) {
+      e.target.closest('.plate-card').remove();
       reindex();
     }
-    if (e.target.classList.contains('remove-filament')) {
-      const rows = e.target.closest('.filament-rows');
-      if (rows.querySelectorAll('.fil-row').length > 1) {
-        e.target.closest('.fil-row').remove();
-        reindex();
-      }
+    return;
+  }
+  if (e.target.classList.contains('add-filament')) {
+    const rows = e.target.closest('.plate-card').querySelector('.filament-rows');
+    const newRow = buildFilRow();
+    rows.appendChild(newRow);
+    reindex();
+    return;
+  }
+  if (e.target.classList.contains('remove-filament')) {
+    const rows = e.target.closest('.filament-rows');
+    if (rows.querySelectorAll('.fil-row').length > 1) {
+      e.target.closest('.fil-row').remove();
+      reindex();
     }
-  });
+  }
+});
 
-  reindex();
+// ── boot ──────────────────────────────────────────────────────────────────────
+initEmptyRows();
+reindex();
 </script>
 {% endblock %}

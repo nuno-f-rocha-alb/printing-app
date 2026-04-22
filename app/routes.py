@@ -399,9 +399,22 @@ def order_new():
         flash("Order created and stock updated.", "success")
         return redirect(url_for("main.order_detail", oid=order.id))
 
+    filaments_data = [
+        {
+            "id": f.id,
+            "brand": f.name,
+            "material": f.material,
+            "color": f.color,
+            "color_hex": f.color_hex or "",
+            "stock_g": float(f.stock_g),
+            "avg_price": float(f.avg_price_per_kg),
+        }
+        for f in filaments
+    ]
     return render_template(
         "order_form.html",
         filaments=filaments,
+        filaments_data=filaments_data,
         default_profit_pct=Setting.get("default_profit_pct"),
     )
 
