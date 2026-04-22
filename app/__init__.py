@@ -46,14 +46,20 @@ def _run_additive_migrations(app):
             conn.commit()
 
 
-def _lookup_bambu_hex(bambu, material, color):
-    if material in bambu and color in bambu[material]:
-        return bambu[material][color]
-    color_lower = color.lower()
-    for mat_colors in bambu.values():
-        for col_name, hex_val in mat_colors.items():
-            if col_name.lower() == color_lower:
-                return hex_val
+def _lookup_bambu_hex(bambu, brand, material, color):
+    """Look up hex by brand → material → color, with case-insensitive fallback."""
+    brand_l = brand.lower()
+    material_l = material.lower()
+    color_l = color.lower()
+    for b_key, materials in bambu.items():
+        if b_key.lower() != brand_l:
+            continue
+        for m_key, colors in materials.items():
+            if m_key.lower() != material_l:
+                continue
+            for c_key, hex_val in colors.items():
+                if c_key.lower() == color_l:
+                    return hex_val
     return None
 
 
@@ -68,7 +74,7 @@ def _backfill_color_hex(app):
     from .models import Filament
     to_update = Filament.query.filter(Filament.color_hex.is_(None)).all()
     for fil in to_update:
-        hex_val = _lookup_bambu_hex(bambu, fil.material.strip(), fil.color.strip())
+        hex_val = _lookup_bambu_hex(bambu, fil.name.strip(), fil.material.strip(), fil.color.strip())
         if hex_val:
             fil.color_hex = hex_val
     db.session.commit()

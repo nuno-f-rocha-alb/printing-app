@@ -7,7 +7,7 @@
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label">Brand / Name</label>
-        <input name="name" class="form-control" required>
+        <input name="name" id="brandInput" class="form-control" required>
       </div>
       <div class="col-md-3">
         <label class="form-label">Material</label>
@@ -45,32 +45,37 @@ fetch("{{ url_for('static', filename='bambu_colors.json') }}")
   .then(r => r.json())
   .then(data => { BAMBU = data; });
 
-function lookupHex(material, color) {
+function lookupHex(brand, material, color) {
   if (!BAMBU || !color) return null;
-  if (BAMBU[material] && BAMBU[material][color]) return { hex: BAMBU[material][color], exact: true };
-  const colorLower = color.toLowerCase();
-  for (const [mat, colors] of Object.entries(BAMBU)) {
-    for (const [name, hex] of Object.entries(colors)) {
-      if (name.toLowerCase() === colorLower) return { hex, exact: mat === material };
+  const bL = brand.toLowerCase(), mL = material.toLowerCase(), cL = color.toLowerCase();
+  for (const [bKey, materials] of Object.entries(BAMBU)) {
+    if (bKey.toLowerCase() !== bL) continue;
+    for (const [mKey, colors] of Object.entries(materials)) {
+      if (mKey.toLowerCase() !== mL) continue;
+      for (const [cKey, hex] of Object.entries(colors)) {
+        if (cKey.toLowerCase() === cL) return hex;
+      }
     }
   }
   return null;
 }
 
 function tryAutoFill() {
-  const mat = document.getElementById('materialInput').value.trim();
-  const col = document.getElementById('colorName').value.trim();
-  const hint = document.getElementById('colorHint');
-  const result = lookupHex(mat, col);
-  if (result) {
-    document.getElementById('colorPicker').value = result.hex;
-    hint.textContent = result.exact ? '✓ Bambu color matched' : '~ Color matched from another material';
+  const brand = document.getElementById('brandInput').value.trim();
+  const mat   = document.getElementById('materialInput').value.trim();
+  const col   = document.getElementById('colorName').value.trim();
+  const hint  = document.getElementById('colorHint');
+  const hex   = lookupHex(brand, mat, col);
+  if (hex) {
+    document.getElementById('colorPicker').value = hex;
+    hint.textContent = '✓ Bambu color matched';
     hint.className = 'form-text text-success';
-  } else if (col) {
+  } else {
     hint.textContent = '';
   }
 }
 
+document.getElementById('brandInput').addEventListener('input', tryAutoFill);
 document.getElementById('colorName').addEventListener('input', tryAutoFill);
 document.getElementById('materialInput').addEventListener('input', tryAutoFill);
 </script>
