@@ -266,8 +266,9 @@ def _parse_bambu_3mf(zip_path, filaments_db=None):
                 )
 
                 if plate_json_names:
-                    # Filament colors from project_settings.config
+                    # Per-slot colors and basic types from project_settings.config
                     fil_colors = []
+                    fil_types_basic = []
                     proj_raw = _read("Metadata/project_settings.config")
                     if proj_raw:
                         try:
@@ -276,25 +277,32 @@ def _parse_bambu_3mf(zip_path, filaments_db=None):
                             if isinstance(raw_colors, str):
                                 raw_colors = [raw_colors]
                             fil_colors = [_norm_color(c) for c in raw_colors]
+                            raw_types = proj.get("filament_type") or []
+                            if isinstance(raw_types, str):
+                                raw_types = [raw_types]
+                            fil_types_basic = raw_types
                         except Exception:
                             pass
 
-                    # Filament types from filament_settings_N.config
-                    fil_types = []
-                    for i in range(1, 20):
-                        cfg_raw = _read(f"Metadata/filament_settings_{i}.config")
-                        if cfg_raw is None:
-                            break
+                    # Which extruder slots are actually assigned to objects?
+                    # model_settings.config has <metadata key="extruder" value="N"/>
+                    # per object. Collect the unique set so we skip idle AMS slots.
+                    used_slots = set()
+                    model_raw = _read("Metadata/model_settings.config")
+                    if model_raw:
                         try:
-                            cfg = json.loads(cfg_raw)
-                            inherits = (cfg.get("inherits") or
-                                        (cfg.get("filament_settings_id") or [""])[0])
-                            # "Bambu PETG HF @BBL A1" → "Bambu PETG HF" → "PETG HF"
-                            fil_type = inherits.split("@")[0].strip()
-                            color_hex = fil_colors[i - 1] if (i - 1) < len(fil_colors) else ""
-                            fil_types.append((fil_type, color_hex))
-                        except Exception:
+                            mroot = ET.fromstring(model_raw)
+                            for meta in _xml_iter(mroot, "metadata"):
+                                if meta.get("key") == "extruder":
+                                    try:
+                                        used_slots.add(int(meta.get("value", 0)))
+                                    except (ValueError, TypeError):
+                                        pass
+                        except ET.ParseError:
                             pass
+                    # Fall back to all configured slots if we couldn't determine
+                    if not used_slots:
+                        used_slots = set(range(1, len(fil_colors) + 1))
 
                     for pjson_name in plate_json_names:
                         m = re.search(r"(\d+)\.json$", pjson_name, re.IGNORECASE)
@@ -311,7 +319,10 @@ def _parse_bambu_3mf(zip_path, filaments_db=None):
                                 break
 
                         fils = []
-                        for fil_type, color_hex in fil_types:
+                        for slot in sorted(used_slots):
+                            i0 = slot - 1  # 0-based index into colour/type arrays
+                            color_hex = fil_colors[i0] if i0 < len(fil_colors) else ""
+                            fil_type  = fil_types_basic[i0] if i0 < len(fil_types_basic) else "PLA"
                             matched = None
                             if filaments_db:
                                 mf = _match_filament_db(fil_type, color_hex or None, filaments_db)
