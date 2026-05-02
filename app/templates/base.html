@@ -15,6 +15,41 @@
     #theme-toggle { cursor:pointer; background:none; border:none; color:inherit; padding:0 0.5rem; line-height:1; display:flex; align-items:center; }
     #theme-toggle svg { transition: opacity 150ms ease; }
     .table > tbody > tr { transition: background-color 150ms ease; }
+
+    /* dark mode: replace Bootstrap's harsh yellow with muted amber */
+    [data-bs-theme="dark"] {
+      --bs-warning:              #c87814;
+      --bs-warning-rgb:          200, 120, 20;
+      --bs-warning-bg-subtle:    #3d2800;
+      --bs-warning-border-subtle:#7a5000;
+      --bs-warning-text-emphasis:#ffd080;
+    }
+    [data-bs-theme="dark"] .table-warning {
+      --bs-table-bg:           rgba(180, 100, 0, 0.18);
+      --bs-table-color:        var(--bs-body-color);
+      --bs-table-border-color: rgba(180, 100, 0, 0.30);
+    }
+    [data-bs-theme="dark"] .btn-warning {
+      --bs-btn-bg:                  #7a4a00;
+      --bs-btn-border-color:        #7a4a00;
+      --bs-btn-color:               #fcd080;
+      --bs-btn-hover-bg:            #9a6200;
+      --bs-btn-hover-border-color:  #9a6200;
+      --bs-btn-hover-color:         #fcd080;
+      --bs-btn-active-bg:           #9a6200;
+      --bs-btn-active-border-color: #9a6200;
+      --bs-btn-active-color:        #fcd080;
+    }
+    [data-bs-theme="dark"] .btn-outline-warning {
+      --bs-btn-color:               #c87814;
+      --bs-btn-border-color:        #c87814;
+      --bs-btn-hover-bg:            #7a4a00;
+      --bs-btn-hover-border-color:  #7a4a00;
+      --bs-btn-hover-color:         #fcd080;
+      --bs-btn-active-bg:           #7a4a00;
+      --bs-btn-active-border-color: #7a4a00;
+      --bs-btn-active-color:        #fcd080;
+    }
   </style>
   <script>
     (function() {
