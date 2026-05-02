@@ -420,12 +420,32 @@ function loadSTL(url) {
 
 function load3MF(url) {
   clearScene();
+  const titleEl = document.getElementById('stl-viewer-title');
+  const origTitle = titleEl.textContent;
+  titleEl.textContent = origTitle + ' · loading…';
+
   const loader = new ThreeMFLoader();
-  loader.load(url, object => {
-    loadedObject = object;
-    scene.add(loadedObject);
-    fitCamera(loadedObject);
-  });
+  loader.load(
+    url,
+    object => {
+      titleEl.textContent = origTitle;
+      loadedObject = object;
+      scene.add(loadedObject);
+
+      const box = new THREE.Box3().setFromObject(object);
+      if (box.isEmpty()) {
+        // loader returned empty geometry — nothing to show
+        titleEl.textContent = origTitle + ' · no geometry';
+        return;
+      }
+      fitCamera(loadedObject);
+    },
+    undefined,
+    err => {
+      titleEl.textContent = origTitle + ' · load error';
+      console.error('3MF viewer error:', err);
+    }
+  );
 }
 
 function openViewer(url, name, fileType) {
@@ -434,12 +454,16 @@ function openViewer(url, name, fileType) {
   document.getElementById('stl-viewer-title').textContent = name || '3D Viewer';
   card.classList.remove('d-none');
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  if (!renderer) initViewer(canvas);
-  if (fileType === '3mf') {
-    load3MF(url);
-  } else {
-    loadSTL(url);
-  }
+  // Defer init one frame so the card has been laid out and canvas has dimensions
+  requestAnimationFrame(() => {
+    if (!renderer) initViewer(canvas);
+    else {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      if (w > 0 && h > 0) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+    }
+    if (fileType === '3mf') load3MF(url);
+    else loadSTL(url);
+  });
 }
 
 document.getElementById('stl-viewer-close')?.addEventListener('click', () => {
