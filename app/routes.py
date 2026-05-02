@@ -250,12 +250,10 @@ def _parse_bambu_3mf(zip_path, filaments_db=None):
                 })
 
             if not result["plates"]:
-                # Expose the actual tag names found so we can diagnose the structure
-                all_tags = sorted({_local(el.tag) for el in root.iter()})
                 result["warning"] = (
-                    f"slice_info.config found but no <plate> elements extracted. "
-                    f"Tags found in XML: {all_tags}. "
-                    f"Report this so the parser can be updated."
+                    "This .3mf was saved before slicing — no plate data found. "
+                    "In Bambu Studio: click ‘Slice plate’, "
+                    "then File → Save Project, and import again."
                 )
 
     except zipfile.BadZipFile:
