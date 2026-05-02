@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from html.parser import HTMLParser
 import base64
+import json
 import os
 import re
 import tempfile
@@ -250,11 +251,105 @@ def _parse_bambu_3mf(zip_path, filaments_db=None):
                 })
 
             if not result["plates"]:
-                result["warning"] = (
-                    "This .3mf was saved before slicing — no plate data found. "
-                    "In Bambu Studio: click ‘Slice plate’, "
-                    "then File → Save Project, and import again."
+                # ── Bambu Studio v02.06+ new format ──────────────────────────
+                # slice_info.config now only holds a version header.
+                # Plate list comes from plate_N.json files.
+                # Filament types: filament_settings_N.config (JSON, "inherits" key).
+                # Filament colors: project_settings.config → filament_colour[N-1].
+                # Print time and per-plate weights are NOT stored in project files
+                # (only in the generated G-code); they must be filled in manually.
+
+                plate_json_names = sorted(
+                    [n for n in names
+                     if re.match(r"(?i)metadata/plate_(\d+)\.json$", n)],
+                    key=lambda n: int(re.search(r"(\d+)", n).group(1))
                 )
+
+                if plate_json_names:
+                    # Filament colors from project_settings.config
+                    fil_colors = []
+                    proj_raw = _read("Metadata/project_settings.config")
+                    if proj_raw:
+                        try:
+                            proj = json.loads(proj_raw)
+                            raw_colors = proj.get("filament_colour") or []
+                            if isinstance(raw_colors, str):
+                                raw_colors = [raw_colors]
+                            fil_colors = [_norm_color(c) for c in raw_colors]
+                        except Exception:
+                            pass
+
+                    # Filament types from filament_settings_N.config
+                    fil_types = []
+                    for i in range(1, 20):
+                        cfg_raw = _read(f"Metadata/filament_settings_{i}.config")
+                        if cfg_raw is None:
+                            break
+                        try:
+                            cfg = json.loads(cfg_raw)
+                            inherits = (cfg.get("inherits") or
+                                        (cfg.get("filament_settings_id") or [""])[0])
+                            # "Bambu PETG HF @BBL A1" → "Bambu PETG HF" → "PETG HF"
+                            fil_type = inherits.split("@")[0].strip()
+                            color_hex = fil_colors[i - 1] if (i - 1) < len(fil_colors) else ""
+                            fil_types.append((fil_type, color_hex))
+                        except Exception:
+                            pass
+
+                    for pjson_name in plate_json_names:
+                        m = re.search(r"(\d+)\.json$", pjson_name, re.IGNORECASE)
+                        if not m:
+                            continue
+                        idx = int(m.group(1))
+
+                        thumb_b64 = None
+                        for pname in (f"Metadata/plate_{idx}.png",
+                                      f"Metadata/plate_{idx:02d}.png"):
+                            raw = _read(pname)
+                            if raw:
+                                thumb_b64 = "data:image/png;base64," + base64.b64encode(raw).decode()
+                                break
+
+                        fils = []
+                        for fil_type, color_hex in fil_types:
+                            matched = None
+                            if filaments_db:
+                                mf = _match_filament_db(fil_type, color_hex or None, filaments_db)
+                                if mf:
+                                    matched = {
+                                        "id": mf.id,
+                                        "brand": mf.name,
+                                        "material": mf.material,
+                                        "color": mf.color,
+                                        "color_hex": mf.color_hex or "",
+                                    }
+                            fils.append({
+                                "type": fil_type,
+                                "color": color_hex,
+                                "used_g": 0.0,
+                                "matched": matched,
+                            })
+
+                        result["plates"].append({
+                            "index": idx,
+                            "print_time_hours": 0.0,
+                            "filaments": fils,
+                            "thumb_b64": thumb_b64,
+                        })
+
+                    if result["plates"]:
+                        result["warning"] = (
+                            "Bambu Studio v02.06+ format: print time and filament "
+                            "weights are not stored in project files — "
+                            "please fill them in manually."
+                        )
+
+                if not result["plates"]:
+                    result["warning"] = (
+                        "This .3mf was saved before slicing — no plate data found. "
+                        "In Bambu Studio: click ‘Slice plate’, "
+                        "then File → Save Project, and import again."
+                    )
 
     except zipfile.BadZipFile:
         result["warning"] = "Invalid .3mf file (not a valid ZIP archive)."
