@@ -158,7 +158,8 @@ def _xml_iter(el, local_name):
 def _3mf_to_stl_bytes(zip_path):
     """
     Extract all mesh geometry from a .3mf ZIP and return binary STL bytes.
-    Handles component references and build-item transforms.
+    Handles Bambu's multi-file format where geometry lives in 3D/Objects/*.model
+    files referenced via 3D/_rels/3dmodel.model.rels.
     Returns None if no geometry found.
     """
     import struct
@@ -168,12 +169,33 @@ def _3mf_to_stl_bytes(zip_path):
         names_ci = {n.lower(): n for n in names}
 
         def _read(path):
+            path = path.lstrip("/")
             if path in names:
                 return zf.read(path)
             key = names_ci.get(path.lower())
             return zf.read(key) if key else None
 
-        # Locate the main model file via relationships
+        def _parse_objects(xml_root):
+            """Return {id: (verts, tris)} for all <object> elements with a <mesh>."""
+            result = {}
+            for obj in _xml_iter(xml_root, "object"):
+                oid = obj.get("id")
+                mesh_els = _xml_iter(obj, "mesh")
+                if not mesh_els:
+                    continue
+                mesh = mesh_els[0]
+                verts = [
+                    (float(v.get("x", 0)), float(v.get("y", 0)), float(v.get("z", 0)))
+                    for v in _xml_iter(mesh, "vertex")
+                ]
+                tris = [
+                    (int(t.get("v1", 0)), int(t.get("v2", 0)), int(t.get("v3", 0)))
+                    for t in _xml_iter(mesh, "triangle")
+                ]
+                result[oid] = (verts, tris)
+            return result
+
+        # Locate the main model file via package relationships
         model_path = "3D/3dmodel.model"
         rels_raw = _read("_rels/.rels")
         if rels_raw:
@@ -193,23 +215,39 @@ def _3mf_to_stl_bytes(zip_path):
 
         root = ET.fromstring(model_raw)
 
-        # Parse every <object> into {id: (verts, tris)}
-        objects = {}
+        # Collect mesh objects from the main model
+        all_objects = _parse_objects(root)
+
+        # Also load sub-model files referenced in the model's own .rels file.
+        # Bambu stores each part's geometry in 3D/Objects/object_N.model.
+        model_dir = model_path.rsplit("/", 1)[0] if "/" in model_path else ""
+        model_fn  = model_path.rsplit("/", 1)[1] if "/" in model_path else model_path
+        sub_rels_raw = _read(f"{model_dir}/_rels/{model_fn}.rels")
+        if sub_rels_raw:
+            try:
+                for rel in _xml_iter(ET.fromstring(sub_rels_raw), "Relationship"):
+                    sp = rel.get("Target", "").lstrip("/")
+                    if not sp.lower().endswith(".model"):
+                        continue
+                    sub_raw = _read(sp)
+                    if sub_raw:
+                        try:
+                            all_objects.update(_parse_objects(ET.fromstring(sub_raw)))
+                        except ET.ParseError:
+                            pass
+            except ET.ParseError:
+                pass
+
+        # Parse assembly objects: main-model objects that reference mesh objects
+        # via <components><component objectid="N"/></components>
+        assembly = {}
         for obj in _xml_iter(root, "object"):
-            oid = obj.get("id")
-            mesh_els = _xml_iter(obj, "mesh")
-            if not mesh_els:
-                continue
-            mesh = mesh_els[0]
-            verts = [
-                (float(v.get("x", 0)), float(v.get("y", 0)), float(v.get("z", 0)))
-                for v in _xml_iter(mesh, "vertex")
-            ]
-            tris = [
-                (int(t.get("v1", 0)), int(t.get("v2", 0)), int(t.get("v3", 0)))
-                for t in _xml_iter(mesh, "triangle")
-            ]
-            objects[oid] = (verts, tris)
+            comps = _xml_iter(obj, "component")
+            if comps:
+                assembly[obj.get("id")] = [
+                    {"objectid": c.get("objectid"), "transform": c.get("transform")}
+                    for c in comps
+                ]
 
         def _apply_transform(verts, transform_str):
             if not transform_str:
@@ -230,30 +268,31 @@ def _3mf_to_stl_bytes(zip_path):
         all_tris = []
 
         def _collect(oid, transform_str=None):
-            if oid not in objects:
-                return
-            verts, tris = objects[oid]
-            if transform_str:
-                verts = _apply_transform(verts, transform_str)
-            for v1, v2, v3 in tris:
-                if v1 < len(verts) and v2 < len(verts) and v3 < len(verts):
-                    all_tris.append((verts[v1], verts[v2], verts[v3]))
+            if oid in all_objects:
+                verts, tris = all_objects[oid]
+                if transform_str:
+                    verts = _apply_transform(verts, transform_str)
+                for v1, v2, v3 in tris:
+                    if v1 < len(verts) and v2 < len(verts) and v3 < len(verts):
+                        all_tris.append((verts[v1], verts[v2], verts[v3]))
+            elif oid in assembly:
+                for comp in assembly[oid]:
+                    _collect(comp["objectid"], comp.get("transform") or transform_str)
 
-        # Process build items (with optional per-item transforms)
         build_items = _xml_iter(root, "item")
         if build_items:
             for item in build_items:
                 _collect(item.get("objectid"), item.get("transform"))
         else:
-            for oid in objects:
+            for oid in list(all_objects):
                 _collect(oid)
 
         if not all_tris:
             return None
 
         # Encode as binary STL
-        buf = bytearray(b"\x00" * 80)           # header
-        buf += struct.pack("<I", len(all_tris))  # triangle count
+        buf = bytearray(b"\x00" * 80)
+        buf += struct.pack("<I", len(all_tris))
         for (x1, y1, z1), (x2, y2, z2), (x3, y3, z3) in all_tris:
             ax, ay, az = x2 - x1, y2 - y1, z2 - z1
             bx, by, bz = x3 - x1, y3 - y1, z3 - z1
@@ -289,8 +328,13 @@ def _parse_bambu_3mf(zip_path, filaments_db=None):
                 key = names_ci.get(path.lower())
                 return zf.read(key) if key else None
 
-            # Overall thumbnail
-            for t in ("Metadata/thumbnail.png", "Metadata/thumbnail_small.png"):
+            # Overall thumbnail — try both old (Metadata/) and new (Auxiliaries/) Bambu paths
+            for t in (
+                "Metadata/thumbnail.png",
+                "Metadata/thumbnail_small.png",
+                "Auxiliaries/.thumbnails/thumbnail_3mf.png",
+                "Auxiliaries/.thumbnails/thumbnail_middle.png",
+            ):
                 raw = _read(t)
                 if raw:
                     result["thumb_b64"] = "data:image/png;base64," + base64.b64encode(raw).decode()
