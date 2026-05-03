@@ -155,11 +155,11 @@ def _xml_iter(el, local_name):
     return [c for c in el.iter() if _local(c.tag) == local_name]
 
 
-def _3mf_to_stl_bytes(zip_path):
+def _3mf_to_stl_bytes(zip_path, plate_n=None):
     """
-    Extract all mesh geometry from a .3mf ZIP and return binary STL bytes.
-    Handles Bambu's multi-file format where geometry lives in 3D/Objects/*.model
-    files referenced via 3D/_rels/3dmodel.model.rels.
+    Extract mesh geometry from a .3mf ZIP and return binary STL bytes.
+    If plate_n is given, only include objects assigned to that plate
+    (resolved via Metadata/plate_N.json + Metadata/model_settings.config).
     Returns None if no geometry found.
     """
     import struct
@@ -249,6 +249,33 @@ def _3mf_to_stl_bytes(zip_path):
                     for c in comps
                 ]
 
+        # Per-plate filtering: resolve object IDs from plate_N.json + model_settings.config
+        filter_oids = None
+        if plate_n is not None:
+            plate_raw = _read(f"Metadata/plate_{plate_n}.json")
+            if plate_raw:
+                try:
+                    plate_data = json.loads(plate_raw)
+                    plate_names = {
+                        obj["name"] for obj in plate_data.get("bbox_objects", [])
+                        if obj.get("name")
+                    }
+                    settings_raw = _read("Metadata/model_settings.config")
+                    if settings_raw and plate_names:
+                        try:
+                            s_root = ET.fromstring(settings_raw)
+                            filter_oids = set()
+                            for obj_el in _xml_iter(s_root, "object"):
+                                obj_id = obj_el.get("id")
+                                for meta in _xml_iter(obj_el, "metadata"):
+                                    if meta.get("key") == "name" and meta.get("value") in plate_names:
+                                        filter_oids.add(obj_id)
+                                        break
+                        except ET.ParseError:
+                            pass
+                except (json.JSONDecodeError, KeyError):
+                    pass
+
         def _apply_transform(verts, transform_str):
             if not transform_str:
                 return verts
@@ -282,9 +309,14 @@ def _3mf_to_stl_bytes(zip_path):
         build_items = _xml_iter(root, "item")
         if build_items:
             for item in build_items:
-                _collect(item.get("objectid"), item.get("transform"))
+                oid = item.get("objectid")
+                if filter_oids is not None and oid not in filter_oids:
+                    continue
+                _collect(oid, item.get("transform"))
         else:
             for oid in list(all_objects):
+                if filter_oids is not None and oid not in filter_oids:
+                    continue
                 _collect(oid)
 
         if not all_tris:
@@ -1282,6 +1314,20 @@ def serve_file_as_stl(fid):
         abort(400)
     path = os.path.join(current_app.config["UPLOAD_FOLDER"], f.filename)
     stl_bytes = _3mf_to_stl_bytes(path)
+    if not stl_bytes:
+        abort(404)
+    return Response(stl_bytes, mimetype="application/octet-stream")
+
+
+@bp.route("/files/<int:fid>/plate/<int:plate_n>/stl")
+def serve_file_plate_stl(fid, plate_n):
+    """Convert a specific plate from a .3mf to binary STL for the per-plate 3D viewer."""
+    from flask import Response
+    f = OrderFile.query.get_or_404(fid)
+    if f.file_type != "3mf":
+        abort(400)
+    path = os.path.join(current_app.config["UPLOAD_FOLDER"], f.filename)
+    stl_bytes = _3mf_to_stl_bytes(path, plate_n=plate_n)
     if not stl_bytes:
         abort(404)
     return Response(stl_bytes, mimetype="application/octet-stream")

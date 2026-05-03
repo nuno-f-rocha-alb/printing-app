@@ -134,16 +134,28 @@
 
       {# plate thumbnails extracted from 3MF #}
       {% set plate_thumbs = order.files | selectattr('is_plate_thumb') | list %}
+      {% set threemf_files = order.files | rejectattr('is_plate_thumb') | selectattr('file_type', 'equalto', '3mf') | list %}
+      {% set threemf_fid = threemf_files[0].id if threemf_files else none %}
       {% if plate_thumbs %}
       <div class="card-body border-bottom py-2">
         <div class="text-muted small mb-2">Plate thumbnails</div>
         <div class="d-flex flex-wrap gap-2">
           {% for f in plate_thumbs %}
           <div class="text-center">
+            {% if threemf_fid %}
+            <a href="#" class="plate-thumb-viewer d-inline-block position-relative"
+               data-fid="{{ threemf_fid }}" data-plate="{{ f.plate_index }}"
+               title="View Plate {{ f.plate_index }} in 3D">
+              <img src="{{ url_for('main.serve_file', fid=f.id) }}"
+                   class="rounded border" style="height:72px;width:auto;object-fit:cover;cursor:pointer;" alt="">
+              <span class="position-absolute bottom-0 end-0 badge bg-info rounded-1" style="font-size:0.6rem;line-height:1.2;padding:1px 3px;margin:2px;">3D</span>
+            </a>
+            {% else %}
             <a href="{{ url_for('main.serve_file', fid=f.id) }}" target="_blank">
               <img src="{{ url_for('main.serve_file', fid=f.id) }}"
                    class="rounded border" style="height:72px;width:auto;object-fit:cover;" alt="">
             </a>
+            {% endif %}
             <div class="text-muted" style="font-size:0.7rem;margin-top:2px;">Plate {{ f.plate_index }}</div>
           </div>
           {% endfor %}
@@ -441,6 +453,17 @@ document.getElementById('stl-viewer-close')?.addEventListener('click', () => {
 
 document.querySelectorAll('.view-stl-btn').forEach(btn => {
   btn.addEventListener('click', () => openViewer(btn.dataset.fileUrl, btn.dataset.fileName, btn.dataset.fileType));
+});
+
+document.querySelectorAll('.plate-thumb-viewer').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    openViewer(
+      `/files/${link.dataset.fid}/plate/${link.dataset.plate}/stl`,
+      `Plate ${link.dataset.plate}`,
+      'stl'
+    );
+  });
 });
 </script>
 {% endblock %}
